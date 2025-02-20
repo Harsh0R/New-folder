@@ -3,25 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Polygon Wallet with WalletConnect</title>
-    <script src="https://cdn.jsdelivr.net/npm/web3@1.8.2/dist/web3.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.7.8/dist/umd/index.min.js"></script>
+    <title>Multi-Chain Wallet</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
 </head>
 <body>
-    <h2>Connect Wallet</h2>
-    <button id="connectWallet">Connect</button>
-    <button id="disconnectWallet" style="display:none;">Disconnect</button>
-    <p id="walletAddress">Not connected</p>
-    <p id="walletBalance">Balance: 0 MATIC</p>
+    <h2>Multi-Chain Wallet</h2>
+    <button id="connectWallet">Connect Wallet</button>
+    <p id="walletAddress">Not Connected</p>
+    <p id="walletBalance">Balance: 0</p>
+    <p id="usdtBalance">USDT Balance: 0</p>
+    <p id="usdcBalance">USDC Balance: 0</p>
     
-    <h2>Send MATIC</h2>
-    <input type="text" id="recipientAddress" placeholder="Recipient Address" />
-    <input type="text" id="amount" placeholder="Amount in MATIC" />
-    <button id="sendMatic">Send MATIC</button>
+    <h3>Send Native Token</h3>
+    <input type="text" id="recipientAddress" placeholder="Recipient Address">
+    <input type="text" id="amount" placeholder="Amount">
+    <button id="sendToken">Send Token</button>
+    
+    <h3>Send USDT</h3>
+    <input type="text" id="usdtRecipientAddress" placeholder="Recipient Address">
+    <input type="text" id="usdtAmount" placeholder="Amount">
+    <button id="sendUsdtToken">Send USDT</button>
+    
+    
+    <h3>Send USDC</h3>
+    <input type="text" id="usdcRecipientAddress" placeholder="Recipient Address">
+    <input type="text" id="usdcAmount" placeholder="Amount">
+    <button id="sendUsdcToken">Send USDC</button>
+    
+    <h3>Network</h3>
+    <select id="networkSelect">
+        <option value="sepolia">Sepolia (ETH)</option>
+        <option value="ethereum">Ethereum</option>
+        <option value="polygon">Polygon</option>
+        <option value="bsc">BSC</option>
+        <option value="polygonAmoy">Polygon Amoy Testnet</option>
+    </select>
+    <button id="switchNetwork">Switch Network</button>
     
     <p id="transactionStatus"></p>
-    <script type="module" src="app.js"></script>
-
-    <script src="app.js"></script>
+    
+    <script type="module" src="app.js" defer></script>
 </body>
 </html>
