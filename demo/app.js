@@ -124,7 +124,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     let userAccount = null;
     let web3;
-    let currentNetwork = null;
 
     connectButton.addEventListener('click', async () => {
         if (!window.ethereum) {
@@ -154,7 +153,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                 await fetchBalance();
                 await fetchUsdtBalance();
                 await fetchUsdcBalance();
-                await fetchTransactions();
 
                 // Handle account changes
                 window.ethereum.on('accountsChanged', async (accounts) => {
@@ -164,7 +162,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                         await fetchBalance();
                         await fetchUsdtBalance();
                         await fetchUsdcBalance();
-                        await fetchTransactions();
                     } else {
                         userAccount = null;
                         walletAddressDisplay.textContent = 'Not Connected';
@@ -317,11 +314,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             transactionStatus.textContent = `Transaction sent: ${txHash}`;
             console.log("Transaction Hash:", txHash);
 
-            // Save the transaction in the database
-            await saveTransaction(txHash, userAccount, recipient, amount, currentNetwork, network.currency);
-
-            setTimeout(fetchTransactions, 2000); // Refresh transaction history
-
+      
         } catch (error) {
             console.error("Transaction failed:", error);
             transactionStatus.textContent = `Transaction failed: ${error.message}`;
@@ -464,32 +457,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
 
-    // Fetch transactions and display them
-    async function fetchTransactions() {
-        try {
-            const response = await fetch("http://localhost:5000/api/transactions");
-            const transactions = await response.json();
-            const transactionList = document.getElementById("transactionList");
-            transactionList.innerHTML = "";
-
-            transactions.forEach(tx => {
-                const txElement = document.createElement("li");
-                txElement.innerHTML = `
-                    <strong>Hash:</strong> <a href="https://etherscan.io/tx/${tx.hash}" target="_blank">${tx.hash}</a><br>
-                    <strong>Sender:</strong> ${tx.sender} <br>
-                    <strong>Recipient:</strong> ${tx.recipient} <br>
-                    <strong>Amount:</strong> ${tx.amount} ${tx.token} <br>
-                    <strong>Network:</strong> ${tx.network} <br>
-                    <strong>Time:</strong> ${new Date(tx.timestamp).toLocaleString()}
-                    <hr>
-                `;
-                transactionList.appendChild(txElement);
-            });
-
-        } catch (error) {
-            console.error("Error fetching transactions:", error);
-        }
-    }
 
 
 
