@@ -27,6 +27,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     let userAccount = null;
     let web3;
+    let currentNetwork = null;
 
     connectButton.addEventListener('click', async () => {
         if (!window.ethereum) {
@@ -35,6 +36,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         try {
+            const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+            const network = Object.values(networks).find(net => parseInt(net.chainId, 16) === parseInt(chainId));
+            console.log("Current Chain ID:", network.name);
+            currentNetwork = network.name;
             await window.ethereum.request({ method: 'eth_requestAccounts' });
             web3 = new Web3(window.ethereum);
             const accounts = await web3.eth.getAccounts();
@@ -44,7 +49,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             await fetchBalance();
             await fetchUsdtBalance();
             await fetchUsdcBalance();
-
+            await fetchTransactions();
             window.ethereum.on('accountsChanged', (accounts) => {
                 if (accounts.length > 0) {
                     userAccount = accounts[0];
@@ -173,11 +178,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         try {
-            console.log("chainID:", parseInt(chain.chainId));
-            const amountWei = await web3.utils.toWei(amount, 'ether');
-            const amountHex = await web3.utils.toHex(BigInt(amountWei))
-            console.log("Amount in wei:", amountHex , amountWei);
-
+            const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+            console.log("Chain ID:", parseInt(chain.chainId));
+            const amountWei = web3.utils.toWei(amount, 'ether');
+            const amountHex = web3.utils.toHex(BigInt(amountWei));
+            console.log("Amount in wei:", amountHex, amountWei);
+            const network = Object.values(networks).find(net => parseInt(net.chainId, 16) === parseInt(chainId));
+            console.log("Current Chain ID:", network.name);
+            currentNetwork = network.name;
             const transactionParameters = {
                 to: recipient,
                 from: userAccount,
@@ -195,28 +203,17 @@ document.addEventListener("DOMContentLoaded", async () => {
             transactionStatus.textContent = `Transaction sent: ${txHash}`;
             console.log("Transaction Hash:", txHash);
 
-            const checkTransaction = async () => {
-                try {
-                    const receipt = await web3.eth.getTransactionReceipt(txHash);
-                    if (receipt) {
-                        transactionStatus.textContent = receipt.status
-                            ? 'Transaction confirmed!'
-                            : 'Transaction failed!';
-                        await fetchBalance();
-                        return;
-                    }
-                    setTimeout(checkTransaction, 2000);
-                } catch (error) {
-                    console.error("Error checking transaction:", error);
-                }
-            };
-            setTimeout(checkTransaction, 2000);
+            // Save the transaction in the database
+            await saveTransaction(txHash, userAccount, recipient, amount, currentNetwork, network.currency);
+ 
+            setTimeout(fetchTransactions, 2000); // Refresh transaction history
 
         } catch (error) {
             console.error("Transaction failed:", error);
             transactionStatus.textContent = `Transaction failed: ${error.message}`;
         }
     });
+
 
     const usdtContractAddress = {
 
@@ -225,7 +222,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         polygon: '0x3b2e72e92540855d5f231bbf263fb5b043c5a1d0',
         bsc: '0x55d398326f99059ff775485246999027b3197955'
     };
-    
+
     const usdcContractAddress = {
         sepolia: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
         ethereum: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
@@ -338,5 +335,49 @@ document.addEventListener("DOMContentLoaded", async () => {
             alert("USDT transaction failed: " + error.message);
         }
     });
+
+
+    async function saveTransaction(hash, sender, recipient, amount, network, token) {
+        try {
+            await fetch("http://localhost:5000/api/transactions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ hash, sender, recipient, amount, network, token })
+            });
+        } catch (error) {
+            console.error("Error saving transaction:", error);
+        }
+    }
+
+
+    // Fetch transactions and display them
+    async function fetchTransactions() {
+        try {
+            const response = await fetch("http://localhost:5000/api/transactions");
+            const transactions = await response.json();
+            const transactionList = document.getElementById("transactionList");
+            transactionList.innerHTML = "";
+
+            transactions.forEach(tx => {
+                const txElement = document.createElement("li");
+                txElement.innerHTML = `
+                    <strong>Hash:</strong> <a href="https://etherscan.io/tx/${tx.hash}" target="_blank">${tx.hash}</a><br>
+                    <strong>Sender:</strong> ${tx.sender} <br>
+                    <strong>Recipient:</strong> ${tx.recipient} <br>
+                    <strong>Amount:</strong> ${tx.amount} ${tx.token} <br>
+                    <strong>Network:</strong> ${tx.network} <br>
+                    <strong>Time:</strong> ${new Date(tx.timestamp).toLocaleString()}
+                    <hr>
+                `;
+                transactionList.appendChild(txElement);
+            });
+
+        } catch (error) {
+            console.error("Error fetching transactions:", error);
+        }
+    }
+
+   
+
 
 });
