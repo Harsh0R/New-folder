@@ -60,10 +60,8 @@ document.addEventListener("DOMContentLoaded", async () => {
             });
         } catch (error) {
             console.error("Wallet connection error:", error);
-            // alert(`Failed to connect wallet: ${error.message}`);
         }
     });
-
 
     const networks = {
         sepolia: { chainId: '0xaa36a7', name: 'Sepolia', currency: 'Sepolia(ETH)' },
@@ -77,8 +75,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!userAccount || !web3) return;
         try {
             const chainId = await web3.eth.getChainId();
-            console.log("Chain ID:", chainId);
-            
             const network = Object.values(networks).find(net => parseInt(net.chainId, 16) === parseInt(chainId));
 
             if (!network) {
@@ -95,40 +91,38 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
-    async function fetchTokenBalance(contractAddress, displayElement) {
+    async function fetchTokenBalance(contractAddress, displayElement, tokenName) {
         if (!userAccount || !web3) return;
+
         const chainId = await web3.eth.getChainId();
         const network = Object.values(networks).find(net => parseInt(net.chainId, 16) === parseInt(chainId));
 
         if (!network || !contractAddress[network.name.toLowerCase()]) {
-            displayElement.textContent = 'Balance: N/A';
+            displayElement.textContent = `${tokenName} Balance: N/A`;
             return;
         }
 
         const contract = new web3.eth.Contract(tokenAbi, contractAddress[network.name.toLowerCase()]);
 
-        console.log("Using contract at:", contractAddress[network.name.toLowerCase()]);
-        console.log("Contract instance:", contract);
-
         try {
             const balance = await contract.methods.balanceOf(userAccount).call();
-            console.log("Fetched balance:", balance);
-            displayElement.textContent = `Balance: ${web3.utils.fromWei(balance, 6)}`;
+            // const decimals = await contract.methods.decimals().call();
+            const formattedBalance = web3.utils.fromWei(balance, 6);
+            displayElement.textContent = `${tokenName} Balance: ${formattedBalance}`;
         } catch (error) {
-            console.error("Error fetching balance:", error);
-            displayElement.textContent = 'Error fetching balance';
+            console.error(`Error fetching ${tokenName} balance:`, error);
+            displayElement.textContent = `${tokenName} Balance: Error`;
         }
     }
 
     async function fetchUsdtBalance() {
-        console.log("usdt -->> ", usdtContractAddress);
-        await fetchTokenBalance(usdtContractAddress, usdtBalanceDisplay);
+        console.log("Fetching USDT balance...");
+        await fetchTokenBalance(usdtContractAddress, usdtBalanceDisplay, 'USDT');
     }
 
     async function fetchUsdcBalance() {
-        console.log("usdc -->> ", usdcContractAddress);
-
-        await fetchTokenBalance(usdcContractAddress, usdcBalanceDisplay);
+        console.log("Fetching USDC balance...");
+        await fetchTokenBalance(usdcContractAddress, usdcBalanceDisplay, 'USDC');
     }
 
     document.getElementById('switchNetwork').addEventListener('click', async () => {
@@ -147,6 +141,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             alert(`Switched to ${selectedChain.name}`);
             fetchBalance();
+            fetchUsdtBalance();
+            fetchUsdcBalance();
         } catch (error) {
             console.error(`Failed to switch network: ${error.message}`);
             if (error.code === 4902) {
@@ -178,13 +174,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         try {
             console.log("chainID:", parseInt(chain.chainId));
-            const amountWei = web3.utils.toWei(amount, 'ether');
-            console.log("Amount in wei:", typeof(amountWei));
-            
+            const amountWei = await web3.utils.toWei(amount, 'ether');
+            const amountHex = await web3.utils.toHex(BigInt(amountWei))
+            console.log("Amount in wei:", amountHex , amountWei);
+
             const transactionParameters = {
                 to: recipient,
                 from: userAccount,
-                value: web3.utils.toHex(amountWei),
+                value: amountHex,
                 chainId: chain.chainId,
             };
 
@@ -222,18 +219,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     const usdtContractAddress = {
-        
+
         sepolia: '0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0',
         ethereum: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
         polygon: '0x3b2e72e92540855d5f231bbf263fb5b043c5a1d0',
         bsc: '0x55d398326f99059ff775485246999027b3197955'
     };
+    
     const usdcContractAddress = {
         sepolia: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
         ethereum: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
         polygon: '0x3b2e72e92540855d5f231bbf263fb5b043c5a1d0',
         bsc: '0x55d398326f99059ff775485246999027b3197955'
     };
+
     const usdtAbi = [
         {
             "constant": true,
@@ -339,6 +338,5 @@ document.addEventListener("DOMContentLoaded", async () => {
             alert("USDT transaction failed: " + error.message);
         }
     });
-
 
 });
