@@ -1,10 +1,107 @@
-window.process = {
-    env: {
-        NODE_ENV: 'production'
-    }
-};
+window.process = { env: { NODE_ENV: 'production' } };
 
+import {
+    EthereumClient,
+    w3mConnectors,
+    w3mProvider,
+    WagmiCore,
+    WagmiCoreChains
+} from 'https://unpkg.com/@web3modal/ethereum';
 import { Web3Modal } from 'https://unpkg.com/@web3modal/html';
+
+
+class Web3Connector {
+    constructor(projectId) {
+        this.projectId = projectId;
+        this.web3 = null;
+        this.selectedAccount = null;
+        this.isConnected = false;
+
+        // Initialize Wagmi configuration
+        const { configureChains, createConfig } = WagmiCore;
+        const { polygon } = WagmiCoreChains;
+
+        const { publicClient } = configureChains([polygon], [w3mProvider({ projectId })]);
+        this.wagmiConfig = createConfig({
+            autoConnect: true,
+            connectors: w3mConnectors({ projectId, chains: [polygon] }),
+            publicClient
+        });
+
+        this.ethereumClient = new EthereumClient(this.wagmiConfig, [polygon]);
+        this.web3modal = new Web3Modal({ projectId }, this.ethereumClient);
+    }
+
+
+    async init() {
+        const connectButton = document.getElementById('connectButton');
+        if (connectButton) {
+            connectButton.addEventListener('click', () => this.connect());
+        }
+
+        if (window.ethereum) {
+            window.ethereum.on('accountsChanged', () => this.handleAccountChange());
+            window.ethereum.on('chainChanged', () => this.handleChainChange());
+        }
+
+        await this.checkConnection();
+    }
+
+    async connect() {
+        try {
+            document.getElementById('statusMessage').textContent = 'Connecting...';
+            await this.web3modal.openModal();
+            await this.checkConnection();
+        } catch (error) {
+            console.error('Error connecting wallet:', error);
+            document.getElementById('statusMessage').textContent = 'Error connecting: ' + error.message;
+        }
+    }
+
+    async checkConnection() {
+        const { getAccount, getWalletClient } = WagmiCore;
+        const account = getAccount();
+
+        if (account.isConnected) {
+            const walletClient = await getWalletClient();
+            if (walletClient) {
+                this.web3 = new Web3(walletClient.transport);
+                this.selectedAccount = account.address;
+                this.isConnected = true;
+
+                document.getElementById('walletAddress').textContent = this.selectedAccount;
+                document.getElementById('statusMessage').textContent = 'Wallet connected successfully!';
+
+                // Ensure data is only shown after a successful connection
+                // await fetchBalance();
+                // await fetchUsdtBalance();
+                // await fetchUsdcBalance();
+            }
+        } else {
+            this.disconnect();
+        }
+    }
+
+
+    async handleAccountChange() {
+        await this.checkConnection();
+    }
+
+    async handleChainChange() {
+        await this.checkConnection();
+    }
+
+    disconnect() {
+        this.web3 = null;
+        this.selectedAccount = null;
+        this.isConnected = false;
+        document.getElementById('walletAddress').textContent = 'Not connected';
+        document.getElementById('statusMessage').textContent = 'Wallet disconnected';
+    }
+}
+
+const connector = new Web3Connector('a2745039469e414ecfcf3a08f33b0e88');
+
 
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -36,37 +133,48 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         try {
-            const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-            const network = Object.values(networks).find(net => parseInt(net.chainId, 16) === parseInt(chainId));
-            console.log("Current Chain ID:", network.name);
-            currentNetwork = network.name;
-            await window.ethereum.request({ method: 'eth_requestAccounts' });
+            await connector.connect();  // Ensure wallet is fully connected
+            console.log("Wallet connected.");
+
+            // Ensure web3 is initialized before calling any functions
             web3 = new Web3(window.ethereum);
             const accounts = await web3.eth.getAccounts();
-            userAccount = accounts[0];
 
+            if (accounts.length === 0) {
+                alert("No accounts found. Please unlock your wallet.");
+                return;
+            }
+
+            userAccount = accounts[0];
             walletAddressDisplay.textContent = `Connected: ${userAccount}`;
+
+            // Wait until the wallet is connected before fetching balances
             await fetchBalance();
             await fetchUsdtBalance();
             await fetchUsdcBalance();
             await fetchTransactions();
-            window.ethereum.on('accountsChanged', (accounts) => {
+            
+            window.ethereum.on('accountsChanged', async (accounts) => {
                 if (accounts.length > 0) {
                     userAccount = accounts[0];
                     walletAddressDisplay.textContent = `Connected: ${userAccount}`;
-                    fetchBalance();
-                    fetchUsdtBalance();
-                    fetchUsdcBalance();
+                    await fetchBalance();
+                    await fetchUsdtBalance();
+                    await fetchTransactions();
+                    await fetchUsdcBalance();
                 } else {
                     userAccount = null;
                     walletAddressDisplay.textContent = 'Not Connected';
                     walletBalanceDisplay.textContent = 'Balance: 0';
                 }
             });
+
         } catch (error) {
             console.error("Wallet connection error:", error);
+            document.getElementById('statusMessage').textContent = 'Error connecting: ' + error.message;
         }
     });
+
 
     const networks = {
         sepolia: { chainId: '0xaa36a7', name: 'Sepolia', currency: 'Sepolia(ETH)' },
@@ -205,7 +313,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
             // Save the transaction in the database
             await saveTransaction(txHash, userAccount, recipient, amount, currentNetwork, network.currency);
- 
+
             setTimeout(fetchTransactions, 2000); // Refresh transaction history
 
         } catch (error) {
@@ -377,7 +485,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
     }
 
-   
+
 
 
 });

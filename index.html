@@ -6,48 +6,85 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Multi-Chain Wallet</title>
     <script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        button {
+            padding: 8px 16px;
+            margin: 4px;
+        }
+
+        input {
+            padding: 8px;
+            margin: 4px;
+            width: 200px;
+        }
+
+        hr {
+            margin: 20px 0;
+        }
+
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+    </style>
 </head>
 
 <body>
-    <h2>Multi-Chain Wallet</h2>
+    <h1>Multi-Chain Wallet</h1>
     <button id="connectWallet">Connect Wallet</button>
-    <p id="walletAddress">Not Connected</p>
-    <hr>
-    <h3>Send Native Token : </h3>
-    <p id="walletBalance">Balance: 0</p>
-    <input type="text" id="recipientAddress" placeholder="Recipient Address">
-    <input type="text" id="amount" placeholder="Amount">
-    <button id="sendToken">Send Token</button>
-    <hr>
-    <h3>Send USDT : </h3>
-    <p id="usdtBalance">USDT Balance: 0</p>
-    <input type="text" id="usdtRecipientAddress" placeholder="Recipient Address">
-    <input type="text" id="usdtAmount" placeholder="Amount">
-    <button id="sendUsdtToken">Send USDT</button>
+    <p id="walletAddress">Not connected</p>
+    <p id="statusMessage"></p>
 
-    <hr>
-    <h3>Send USDC : </h3>
-    <p id="usdcBalance">USDC Balance: 0</p>
-    <input type="text" id="usdcRecipientAddress" placeholder="Recipient Address">
-    <input type="text" id="usdcAmount" placeholder="Amount">
-    <button id="sendUsdcToken">Send USDC</button>
-    <hr>
-    <h3>Network : </h3>
-    <select id="networkSelect">
-        <option value="sepolia">Sepolia (ETH)</option>
-        <option value="ethereum">Ethereum</option>
-        <option value="polygon">Polygon</option>
-        <option value="bsc">BSC</option>
-        <option value="polygonAmoy">Polygon Amoy Testnet</option>
-    </select>
-    <button id="switchNetwork">Switch Network</button>
-    <hr>
+    <section>
+        <h3>Native Token</h3>
+        <p id="walletBalance">Balance: 0</p>
+        <input type="text" id="recipientAddress" placeholder="Recipient Address">
+        <input type="text" id="amount" placeholder="Amount">
+        <button id="sendToken">Send</button>
+    </section>
+
+    <section>
+        <h3>USDT</h3>
+        <p id="usdtBalance">USDT Balance: 0</p>
+        <input type="text" id="usdtRecipientAddress" placeholder="Recipient Address">
+        <input type="text" id="usdtAmount" placeholder="Amount">
+        <button id="sendUsdtToken">Send USDT</button>
+    </section>
+
+    <section>
+        <h3>USDC</h3>
+        <p id="usdcBalance">USDC Balance: 0</p>
+        <input type="text" id="usdcRecipientAddress" placeholder="Recipient Address">
+        <input type="text" id="usdcAmount" placeholder="Amount">
+        <button id="sendUsdcToken">Send USDC</button>
+    </section>
+
+    <section>
+        <h3>Network</h3>
+        <select id="networkSelect">
+            <option value="sepolia">Sepolia (ETH)</option>
+            <option value="ethereum">Ethereum</option>
+            <option value="polygon">Polygon</option>
+            <option value="bsc">BSC</option>
+            <option value="polygonAmoy">Polygon Amoy Testnet</option>
+        </select>
+        <button id="switchNetwork">Switch Network</button>
+    </section>
+
     <p id="transactionStatus"></p>
-    <hr>
-    <h3>Transaction History</h3>
-    <ul id="transactionList"></ul>
+    <section>
+        <h3>Transaction History</h3>
+        <ul id="transactionList"></ul>
+    </section>
 
-    <script type="module" src="app.js" defer></script>
+    <script type="module" src="app.js"></script>
 </body>
 
 </html>

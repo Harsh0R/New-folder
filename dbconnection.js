@@ -26,7 +26,7 @@ const transactionSchema = new mongoose.Schema({
 
 const Transaction = mongoose.model("Transaction", transactionSchema);
 
-// Save transaction
+
 app.post("/api/transactions", async (req, res) => {
     try {
         const transaction = new Transaction(req.body);
@@ -37,7 +37,7 @@ app.post("/api/transactions", async (req, res) => {
     }
 });
 
-// Fetch transactions
+
 app.get("/api/transactions", async (req, res) => {
     try {
         const transactions = await Transaction.find().sort({ timestamp: -1 });
