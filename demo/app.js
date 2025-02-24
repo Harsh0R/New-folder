@@ -71,11 +71,6 @@ class Web3Connector {
 
                 document.getElementById('walletAddress').textContent = this.selectedAccount;
                 document.getElementById('statusMessage').textContent = 'Wallet connected successfully!';
-
-                // Ensure data is only shown after a successful connection
-                // await fetchBalance();
-                // await fetchUsdtBalance();
-                // await fetchUsdcBalance();
             }
         } else {
             this.disconnect();
@@ -124,7 +119,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     let userAccount = null;
     let web3;
-
+    // let currentNetwork = null;
     connectButton.addEventListener('click', async () => {
         if (!window.ethereum) {
             alert("Please install MetaMask or Trust Wallet!");
@@ -184,7 +179,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         ethereum: { chainId: '0x1', name: 'Ethereum', currency: 'ETH' },
         polygon: { chainId: '0x89', name: 'Polygon', currency: 'MATIC' },
         bsc: { chainId: '0x38', name: 'BSC', currency: 'BNB' },
-        polygonAmoy: { chainId: '0x13882', name: 'Polygon Amoy Testnet', currency: 'Amoy(MATIC)' }
+        polygonAmoy: { chainId: '0x13882', name: 'polygonAmoy', currency: 'Amoy(MATIC)' },
     };
 
     async function fetchBalance() {
@@ -212,6 +207,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const chainId = await web3.eth.getChainId();
         const network = Object.values(networks).find(net => parseInt(net.chainId, 16) === parseInt(chainId));
+        // console.log("network => " , contractAddress[network.name.toLowerCase()] , network.name.toLowerCase());
 
         if (!network || !contractAddress[network.name.toLowerCase()]) {
             displayElement.textContent = `${tokenName} Balance: N/A`;
@@ -219,6 +215,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         const contract = new web3.eth.Contract(tokenAbi, contractAddress[network.name.toLowerCase()]);
+        // console.log("contract => " , contract);
 
         try {
             const balance = await contract.methods.balanceOf(userAccount).call();
@@ -268,6 +265,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
 
+
     sendButton.addEventListener('click', async () => {
         if (!userAccount || !web3) {
             alert("Please connect your wallet first.");
@@ -296,7 +294,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             console.log("Amount in wei:", amountHex, amountWei);
             const network = Object.values(networks).find(net => parseInt(net.chainId, 16) === parseInt(chainId));
             console.log("Current Chain ID:", network.name);
-            currentNetwork = network.name;
+
             const transactionParameters = {
                 to: recipient,
                 from: userAccount,
@@ -311,10 +309,28 @@ document.addEventListener("DOMContentLoaded", async () => {
                 params: [transactionParameters],
             });
 
+
+
+            try {
+
+                const transactionReceipt = await waitForTransactionReceipt(txHash);
+                console.log("Transaction Receipt:", transactionReceipt);
+            } catch (error) {
+                console.error("Error sending or confirming transaction:", error);
+                throw error;
+            }
+
+            const transaction = await web3.eth.getTransaction(txHash);
+            console.log("Transaction:", transaction);
+            const transactionAmount = web3.utils.fromWei(transaction.value, 'ether');
+            console.log("Transaction Amount:", transactionAmount);
+
+
             transactionStatus.textContent = `Transaction sent: ${txHash}`;
             console.log("Transaction Hash:", txHash);
 
-      
+
+
         } catch (error) {
             console.error("Transaction failed:", error);
             transactionStatus.textContent = `Transaction failed: ${error.message}`;
@@ -322,8 +338,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
 
-    const usdtContractAddress = {
+    async function waitForTransactionReceipt(txHash) {
+        while (true) {
+            console.log("called");
 
+            const receipt = await window.ethereum.request({
+                method: 'eth_getTransactionReceipt',
+                params: [txHash],
+            });
+
+            if (receipt) {
+                return receipt;
+            }
+
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+    }
+
+
+    const usdtContractAddress = {
+        polygonamoy: "0xdfd0892d411491473476b9013352fb0c396d57b6",
         sepolia: '0xaA8E23Fb1079EA71e0a56F48a2aA51851D8433D0',
         ethereum: '0xdAC17F958D2ee523a2206206994597C13D831ec7',
         polygon: '0x3b2e72e92540855d5f231bbf263fb5b043c5a1d0',
@@ -331,6 +365,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     };
 
     const usdcContractAddress = {
+        polygonamoy: "0xdfd0892d411491473476b9013352fb0c396d57b6",
         sepolia: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
         ethereum: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
         polygon: '0x3b2e72e92540855d5f231bbf263fb5b043c5a1d0',
@@ -405,7 +440,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         const amountWei = web3.utils.toWei(amount, 6);
 
         try {
-            await contract.methods.transfer(recipient, amountWei).send({ from: userAccount });
+            const txHash = await contract.methods.transfer(recipient, amountWei).send({ from: userAccount });
+            const transaction = await waitForTransactionReceipt(txHash);
+            console.log("transaction for USDT => ", transaction);
+
             alert("USDC transaction successful!");
             await fetchUsdcBalance();
         } catch (error) {
@@ -413,6 +451,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             console.log("USDC transaction failed: " + error.message);
         }
     });
+
+
+
 
     sendUsdtButton.addEventListener('click', async () => {
         if (!userAccount || !web3) {
@@ -434,8 +475,38 @@ document.addEventListener("DOMContentLoaded", async () => {
         const amountWei = web3.utils.toWei(amount, 6);
 
         try {
-            await contract.methods.transfer(recipient, amountWei).send({ from: userAccount });
-            alert("USDT transaction successful!");
+            const tx = await contract.methods.transfer(recipient, amountWei).send({ from: userAccount });
+
+            console.log("Transaction Hash:", tx.transactionHash);
+
+            const receipt = await web3.eth.getTransactionReceipt(tx.transactionHash);
+            if (!receipt || !receipt.status) {
+                alert("Transaction failed on the blockchain.");
+                return;
+            }
+
+            const transferEvent = receipt.logs.find(log =>
+                log.address.toLowerCase() === usdtContractAddress[network.name.toLowerCase()].toLowerCase() &&
+                log.topics[0] === web3.utils.sha3("Transfer(address,address,uint256)")
+            );
+
+            console.log("transfer Event => ", transferEvent);
+
+
+            if (transferEvent) {
+                const from = "0x" + transferEvent.topics[1].slice(26);
+                const to = "0x" + transferEvent.topics[2].slice(26);
+                const transferredAmount = web3.utils.toWei(transferEvent.data).toString(); // 
+                const tokenAddress = transferEvent.address;
+                console.log("✅ Transfer Confirmed:");
+                console.log("From:", from);
+                console.log("To:", to);
+                console.log("Amount:", web3.utils.fromWei(transferredAmount, "mwei"));
+                console.log("Token Address:", tokenAddress);
+
+                alert(`USDT Transfer Successful!\nAmount: ${web3.utils.fromWei(transferredAmount, "mwei")} USDT\nTo: ${to}`);
+            }
+
             await fetchUsdtBalance();
         } catch (error) {
             console.error("USDT transaction failed:", error);
@@ -444,21 +515,41 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
 
-    async function saveTransaction(hash, sender, recipient, amount, network, token) {
-        try {
-            await fetch("http://localhost:5000/api/transactions", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ hash, sender, recipient, amount, network, token })
-            });
-        } catch (error) {
-            console.error("Error saving transaction:", error);
-        }
-    }
 
 
 
 
 
+
+
+    // sendUsdtButton.addEventListener('click', async () => {
+    //     if (!userAccount || !web3) {
+    //         alert("Please connect your wallet first.");
+    //         return;
+    //     }
+
+    //     const recipient = usdtRecipientInput.value.trim();
+    //     const amount = usdtAmountInput.value.trim();
+    //     const chainId = await web3.eth.getChainId();
+    //     const network = Object.values(networks).find(net => parseInt(net.chainId, 16) === parseInt(chainId));
+
+    //     if (!network || !usdtContractAddress[network.name.toLowerCase()]) {
+    //         alert("USDT not supported on this network.");
+    //         return;
+    //     }
+
+    //     const contract = new web3.eth.Contract(usdtAbi, usdtContractAddress[network.name.toLowerCase()]);
+    //     const amountWei = web3.utils.toWei(amount, 6);
+
+    //     try {
+    //         const txHash = await contract.methods.transfer(recipient, amountWei).send({ from: userAccount });
+    //         console.log("transaction Hash => " , txHash);
+    //         alert("USDT transaction successful!");
+    //         await fetchUsdtBalance();
+    //     } catch (error) {
+    //         console.error("USDT transaction failed:", error);
+    //         alert("USDT transaction failed: " + error.message);
+    //     }
+    // });
 
 });
