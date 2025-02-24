@@ -220,7 +220,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         try {
             const balance = await contract.methods.balanceOf(userAccount).call();
             // const decimals = await contract.methods.decimals().call();
-            const formattedBalance = web3.utils.fromWei(balance, 6);
+            const formattedBalance = web3.utils.fromWei(balance, 18);
             displayElement.textContent = `${tokenName} Balance: ${formattedBalance}`;
         } catch (error) {
             console.error(`Error fetching ${tokenName} balance:`, error);
