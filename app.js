@@ -472,7 +472,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         const contract = new web3.eth.Contract(usdtAbi, usdtContractAddress[network.name.toLowerCase()]);
-        const amountWei = web3.utils.toWei(amount, 6);
+        const amountWei = web3.utils.toWei(amount, 18);
 
         try {
             const tx = await contract.methods.transfer(recipient, amountWei).send({ from: userAccount });
