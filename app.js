@@ -207,7 +207,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const chainId = await web3.eth.getChainId();
         const network = Object.values(networks).find(net => parseInt(net.chainId, 16) === parseInt(chainId));
-        // console.log("network => " , contractAddress[network.name.toLowerCase()] , network.name.toLowerCase());
+        console.log("network => ", network.name.toLowerCase());
 
         if (!network || !contractAddress[network.name.toLowerCase()]) {
             displayElement.textContent = `${tokenName} Balance: N/A`;
@@ -220,7 +220,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         try {
             const balance = await contract.methods.balanceOf(userAccount).call();
             // const decimals = await contract.methods.decimals().call();
-            const formattedBalance = web3.utils.fromWei(balance, 18);
+            let formattedBalance;
+            if (network.name.toLowerCase() === "polygonamoy") {
+                formattedBalance = web3.utils.fromWei(balance, 6);
+            } else {
+                formattedBalance = web3.utils.fromWei(balance, 18);
+            }
             displayElement.textContent = `${tokenName} Balance: ${formattedBalance}`;
         } catch (error) {
             console.error(`Error fetching ${tokenName} balance:`, error);
@@ -437,7 +442,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         const contract = new web3.eth.Contract(tokenAbi, usdcContractAddress[network.name.toLowerCase()]);
-        const amountWei = web3.utils.toWei(amount, 6);
+        let amountWei;
+        if (network.name.toLowerCase() === "polygonamoy") {
+            amountWei = web3.utils.toWei(amount, 6);
+        } else {
+            amountWei = web3.utils.toWei(amount, 18);
+        }
 
         try {
             const txHash = await contract.methods.transfer(recipient, amountWei).send({ from: userAccount });
@@ -471,8 +481,13 @@ document.addEventListener("DOMContentLoaded", async () => {
             return;
         }
 
+        let amountWei;
         const contract = new web3.eth.Contract(usdtAbi, usdtContractAddress[network.name.toLowerCase()]);
-        const amountWei = web3.utils.toWei(amount, 18);
+        if (network.name.toLowerCase() === "polygonamoy") {
+            amountWei = web3.utils.toWei(amount, 6);
+        } else {
+            amountWei = web3.utils.toWei(amount, 18);
+        }
 
         try {
             const tx = await contract.methods.transfer(recipient, amountWei).send({ from: userAccount });
@@ -496,15 +511,16 @@ document.addEventListener("DOMContentLoaded", async () => {
             if (transferEvent) {
                 const from = "0x" + transferEvent.topics[1].slice(26);
                 const to = "0x" + transferEvent.topics[2].slice(26);
-                const transferredAmount = web3.utils.toWei(transferEvent.data).toString(); // 
+                const transferredAmount = BigInt(transferEvent.data).toString(10);
                 const tokenAddress = transferEvent.address;
                 console.log("✅ Transfer Confirmed:");
                 console.log("From:", from);
                 console.log("To:", to);
-                console.log("Amount:", web3.utils.fromWei(transferredAmount, "mwei"));
+                console.log("Amount:", transferredAmount);
+                // console.log("Amount:", web3.utils.fromWei(transferredAmount, "mwei"));
                 console.log("Token Address:", tokenAddress);
 
-                alert(`USDT Transfer Successful!\nAmount: ${web3.utils.fromWei(transferredAmount, "mwei")} USDT\nTo: ${to}`);
+                alert(`USDT Transfer Successful!\nAmount: ${tokenAddress} USDT\nTo: ${to}`);
             }
 
             await fetchUsdtBalance();
